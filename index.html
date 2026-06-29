@@ -745,7 +745,8 @@
             const corregidas = preguntasCorregidasEnRepaso;
             const progreso = ((bloqueActual + 1) / totalBloques * 100);
             const esPerfecto = correctasPrimera === totalPreguntas;
-            const todasCorregidas = correctasPrimera + corregidas === totalPreguntas;
+            // Solo mostrar "Buen trabajo" si se corrigieron preguntas en repaso Y no quedan pendientes
+            const todasCorregidas = corregidas > 0 && incorrectasPendientes === 0;
             
             let html = `
                 <div class="result">
