@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Múltiple - Selecciona tu Balotario</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 700px;
+            width: 100%;
+            padding: 30px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2em;
+            color: #667eea;
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .balotarios-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 30px 0;
+        }
+
+        .balotario-card {
+            background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 200px;
+            border: 3px solid transparent;
+        }
+
+        .balotario-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .balotario-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .balotario-nombre {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .balotario-info {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .balotario-preguntas {
+            background: #667eea;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            display: inline-block;
+            font-size: 0.8em;
+        }
+
+        .select-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 25px;
+            font-size: 1em;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background 0.3s ease;
+        }
+
+        .select-btn:hover {
+            background: #5a67d8;
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .question-counter, .score {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #764ba2;
+        }
+
+        .question-text {
+            font-size: 1.5em;
+            margin-bottom: 25px;
+            color: #333;
+            line-height: 1.4;
+        }
+
+        .answers {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+
+        .answer-btn {
+            background: #f5f5f5;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+            font-size: 1em;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .answer-btn:hover:not(:disabled) {
+            background: #e3e3e3;
+            transform: translateX(5px);
+        }
+
+        .answer-btn.correct {
+            background: #4caf50;
+            border-color: #4caf50;
+            color: white;
+        }
+
+        .answer-btn.incorrect {
+            background: #f44336;
+            border-color: #f44336;
+            color: white;
+        }
+
+        .answer-btn.show-correct {
+            background: #4caf50;
+            border-color: #4caf50;
+            color: white;
+            opacity: 0.6;
+        }
+
+        .answer-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .next-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.3s ease;
+        }
+
+        .next-btn:hover:not(:disabled) {
+            background: #5a67d8;
+        }
+
+        .next-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .result {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .result h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .result p {
+            font-size: 1.5em;
+            margin-bottom: 25px;
+        }
+
+        .result-stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .result-stat {
+            text-align: center;
+            padding: 15px 25px;
+            border-radius: 10px;
+            background: #f5f5f5;
+            min-width: 120px;
+        }
+
+        .result-stat .number {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .result-stat .label {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .result-stat.correct-stat .number {
+            color: #4caf50;
+        }
+
+        .result-stat.incorrect-stat .number {
+            color: #f44336;
+        }
+
+        .restart-btn {
+            background: #764ba2;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 25px;
+            font-size: 1em;
+            cursor: pointer;
+            margin: 5px;
+            transition: background 0.3s ease;
+        }
+
+        .restart-btn:hover {
+            background: #5a3a7a;
+        }
+
+        .back-btn {
+            background: #ff9800;
+        }
+
+        .back-btn:hover {
+            background: #e68900;
+        }
+
+        .review-btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 25px;
+            font-size: 1em;
+            cursor: pointer;
+            margin: 5px;
+            transition: background 0.3s ease;
+        }
+
+        .review-btn:hover {
+            background: #1976D2;
+        }
+
+        .feedback {
+            margin-top: 15px;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+            border-radius: 8px;
+        }
+
+        .feedback.error {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .feedback.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .feedback.info {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .balotario-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .change-balotario-btn {
+            background: #ff9800;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .change-balotario-btn:hover {
+            background: #e68900;
+        }
+
+        .badge-review {
+            background: #2196F3;
+            color: white;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="mainContainer">
+        <div id="content">
+            <div class="loading">
+                <div class="loader"></div>
+                <p>Cargando balotarios...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== CONFIGURACIÓN ==========
+        const BALOTARIOS = [
+            {
+                nombre: "Balotario - Administración",
+                archivo: "balotario-adm.xlsx",
+                icono: "📊",
+                descripcion: "Preguntas de la especialidad de ADM"
+            },
+            {
+                nombre: "Balotario - Cultura",
+                archivo: "balotario-cultura.xlsx",
+                icono: "🎭",
+                descripcion: "Historia universal y del Perú"
+            },
+            {
+                nombre: "Balotario - Deberes",
+                archivo: "DEBERES.xlsx",
+                icono: "✍️",
+                descripcion: "Deberes"
+            },
+            {
+                nombre: " Balotario - Deberes 2",
+                archivo: "Deberes2.xlsx",
+                icono: "✍️",
+                descripcion: "Deberes 2"
+            },
+            {
+                nombre: " Balotario - Cultura 2",
+                archivo: "Cultura2.xlsx",
+                icono: "🎭",
+                descripcion: "Cultura 2"
+            }
+        ];
+        // ====================================
+        
+        let balotariosData = {};
+        let balotarioActual = null;
+        let preguntas = [];
+        let preguntaActual = 0;
+        let puntuacion = 0;
+        let respuestaSeleccionada = false;
+        let bloqueado = false;
+        let preguntasIncorrectas = []; // Almacena las preguntas incorrectas
+        let modoRepaso = false; // Indica si estamos en modo repaso
+        let preguntasOriginales = []; // Guarda las preguntas originales para el repaso
+
+        // ========== NUEVA FUNCIÓN PARA MEZCLAR ==========
+        function mezclarArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+        // =================================================
+
+        async function cargarTodosLosBalotarios() {
+            const container = document.getElementById('content');
+            container.innerHTML = `
+                <div class="loading">
+                    <div class="loader"></div>
+                    <p>Cargando ${BALOTARIOS.length} balotarios...</p>
+                </div>
+            `;
+
+            let cargados = 0;
+            
+            for (const balotario of BALOTARIOS) {
+                try {
+                    console.log(`📥 Cargando: ${balotario.archivo}`);
+                    const response = await fetch(balotario.archivo);
+                    
+                    if (!response.ok) {
+                        throw new Error(`No se pudo cargar ${balotario.archivo}`);
+                    }
+                    
+                    const arrayBuffer = await response.arrayBuffer();
+                    const data = new Uint8Array(arrayBuffer);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const primeraHoja = workbook.Sheets[workbook.SheetNames[0]];
+                    const rows = XLSX.utils.sheet_to_json(primeraHoja, { header: 1 });
+                    
+                    const preguntasBalotario = procesarExcelData(rows, balotario.nombre);
+                    
+                    if (preguntasBalotario && preguntasBalotario.length > 0) {
+                        balotariosData[balotario.archivo] = {
+                            nombre: balotario.nombre,
+                            preguntas: preguntasBalotario,
+                            icono: balotario.icono,
+                            descripcion: balotario.descripcion
+                        };
+                        cargados++;
+                    }
+                    
+                } catch (error) {
+                    console.error(`Error cargando ${balotario.nombre}:`, error);
+                    balotariosData[balotario.archivo] = {
+                        nombre: balotario.nombre,
+                        error: true,
+                        mensaje: error.message,
+                        icono: balotario.icono,
+                        descripcion: balotario.descripcion
+                    };
+                }
+            }
+            
+            if (cargados > 0) {
+                mostrarSeleccionBalotarios();
+            } else {
+                mostrarError("No se pudo cargar ningún balotario. Verifica que los archivos Excel existan.");
+            }
+        }
+
+        function procesarExcelData(rows, nombreBalotario) {
+            if (rows.length < 2) {
+                console.warn(`${nombreBalotario}: No hay suficientes filas`);
+                return null;
+            }
+
+            const encabezados = rows[0];
+            
+            const idxPregunta = encabezados.findIndex(h => 
+                h && (h.toString().toLowerCase().includes('pregunta') || h.toString().toLowerCase().includes('preg')));
+            const idxOpcionA = encabezados.findIndex(h => 
+                h && (h.toString().toLowerCase().includes('opción a') || h.toString().toLowerCase().includes('opcion a') || h === 'A'));
+            const idxOpcionB = encabezados.findIndex(h => 
+                h && (h.toString().toLowerCase().includes('opción b') || h.toString().toLowerCase().includes('opcion b') || h === 'B'));
+            const idxOpcionC = encabezados.findIndex(h => 
+                h && (h.toString().toLowerCase().includes('opción c') || h.toString().toLowerCase().includes('opcion c') || h === 'C'));
+            const idxOpcionD = encabezados.findIndex(h => 
+                h && (h.toString().toLowerCase().includes('opción d') || h.toString().toLowerCase().includes('opcion d') || h === 'D'));
+            const idxCorrecta = encabezados.findIndex(h => 
+                h && (h.toString().toLowerCase().includes('correcta') || h.toString().toLowerCase().includes('correcto')));
+
+            if (idxPregunta === -1 || idxCorrecta === -1) {
+                console.warn(`${nombreBalotario}: Columnas requeridas no encontradas`);
+                return null;
+            }
+
+            const nuevasPreguntas = [];
+            for (let i = 1; i < rows.length; i++) {
+                const fila = rows[i];
+                if (!fila || !fila[idxPregunta]) continue;
+                
+                const opciones = [];
+                if (idxOpcionA !== -1 && fila[idxOpcionA]) opciones.push(fila[idxOpcionA].toString());
+                if (idxOpcionB !== -1 && fila[idxOpcionB]) opciones.push(fila[idxOpcionB].toString());
+                if (idxOpcionC !== -1 && fila[idxOpcionC]) opciones.push(fila[idxOpcionC].toString());
+                if (idxOpcionD !== -1 && fila[idxOpcionD]) opciones.push(fila[idxOpcionD].toString());
+                
+                let correctaTexto = fila[idxCorrecta]?.toString().trim().toUpperCase() || '';
+                let indiceCorrecta = -1;
+                
+                if (correctaTexto === 'A') indiceCorrecta = 0;
+                else if (correctaTexto === 'B') indiceCorrecta = 1;
+                else if (correctaTexto === 'C') indiceCorrecta = 2;
+                else if (correctaTexto === 'D') indiceCorrecta = 3;
+                
+                if (indiceCorrecta === -1 || indiceCorrecta >= opciones.length) {
+                    continue;
+                }
+                
+                nuevasPreguntas.push({
+                    texto: fila[idxPregunta].toString(),
+                    opciones: opciones,
+                    correcta: indiceCorrecta
+                });
+            }
+            
+            return nuevasPreguntas.length > 0 ? nuevasPreguntas : null;
+        }
+
+        function mostrarSeleccionBalotarios() {
+            const container = document.getElementById('content');
+            
+            let html = `
+                <h1>📚 Selecciona tu Balotario</h1>
+                <div class="balotarios-container">
+            `;
+            
+            for (const [archivo, data] of Object.entries(balotariosData)) {
+                if (data.error) {
+                    html += `
+                        <div class="balotario-card" style="border-color: #f44336; opacity: 0.7;">
+                            <div class="balotario-icon">⚠️</div>
+                            <div class="balotario-nombre">${data.nombre}</div>
+                            <div class="balotario-info">Error: No se pudo cargar</div>
+                            <div class="balotario-preguntas" style="background: #f44336;">❌</div>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="balotario-card" onclick="seleccionarBalotario('${archivo}')">
+                            <div class="balotario-icon">${data.icono}</div>
+                            <div class="balotario-nombre">${data.nombre}</div>
+                            <div class="balotario-info">${data.descripcion || ''}</div>
+                            <div class="balotario-preguntas">📝 ${data.preguntas.length} preguntas</div>
+                            <button class="select-btn">Seleccionar</button>
+                        </div>
+                    `;
+                }
+            }
+            
+            html += `
+                </div>
+                <div class="info" style="text-align: center; margin-top: 20px; color: #666;">
+                    💡 Los balotarios se cargaron automáticamente. Selecciona uno para comenzar.
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+
+        function seleccionarBalotario(archivo) {
+            const data = balotariosData[archivo];
+            if (data.error) {
+                alert(`No se puede seleccionar ${data.nombre} porque tiene errores.`);
+                return;
+            }
+            
+            balotarioActual = {
+                archivo: archivo,
+                nombre: data.nombre,
+                icono: data.icono
+            };
+            preguntasOriginales = data.preguntas;
+            modoRepaso = false;
+            iniciarQuiz();
+        }
+
+        function mostrarError(mensaje) {
+            const container = document.getElementById('content');
+            container.innerHTML = `
+                <div class="error-message">
+                    <h2>❌ Error</h2>
+                    <p>${mensaje}</p>
+                    <br>
+                    <p><strong>Verifica que los archivos Excel existan en la misma carpeta:</strong></p>
+                    <ul style="text-align: left; margin-top: 10px;">
+                        ${BALOTARIOS.map(b => `<li>📄 ${b.archivo}</li>`).join('')}
+                    </ul>
+                    <br>
+                    <button class="restart-btn" onclick="location.reload()">🔄 Reintentar</button>
+                </div>
+            `;
+        }
+
+        function iniciarQuiz() {
+            // Mezclar las preguntas aleatoriamente
+            preguntas = mezclarArray([...preguntasOriginales]);
+            preguntasIncorrectas = [];
+            preguntaActual = 0;
+            puntuacion = 0;
+            respuestaSeleccionada = false;
+            bloqueado = false;
+            modoRepaso = false;
+            renderizarPregunta();
+        }
+
+        function iniciarRepaso() {
+            if (preguntasIncorrectas.length === 0) {
+                alert('🎉 ¡No tienes preguntas incorrectas para repasar!');
+                mostrarResultado();
+                return;
+            }
+            
+            modoRepaso = true;
+            preguntas = mezclarArray([...preguntasIncorrectas]);
+            preguntaActual = 0;
+            puntuacion = 0;
+            respuestaSeleccionada = false;
+            bloqueado = false;
+            renderizarPregunta();
+        }
+
+        function renderizarPregunta() {
+            if (preguntaActual >= preguntas.length) {
+                if (modoRepaso) {
+                    // Terminó el repaso
+                    mostrarResultadoRepaso();
+                } else {
+                    mostrarResultado();
+                }
+                return;
+            }
+
+            const pregunta = preguntas[preguntaActual];
+            const container = document.getElementById('content');
+            
+            const badgeRepaso = modoRepaso ? '<span class="badge-review">📝 Repaso</span>' : '';
+            
+            let html = `
+                <div class="balotario-header">
+                    <h1>${balotarioActual.icono} ${balotarioActual.nombre} ${badgeRepaso}</h1>
+                    <button class="change-balotario-btn" onclick="volverASeleccion()">
+                        🔄 Cambiar Balotario
+                    </button>
+                </div>
+                <div class="stats">
+                    <span class="question-counter">Pregunta ${preguntaActual + 1} de ${preguntas.length}</span>
+                    <span class="score">✅ Aciertos: ${puntuacion}</span>
+                </div>
+                <div class="question-text">${escapeHtml(pregunta.texto)}</div>
+                <div class="answers">
+            `;
+
+            pregunta.opciones.forEach((opcion, index) => {
+                const letra = String.fromCharCode(65 + index);
+                html += `
+                    <button class="answer-btn" data-index="${index}">
+                        ${letra}. ${escapeHtml(opcion)}
+                    </button>
+                `;
+            });
+
+            html += `
+                </div>
+                <button class="next-btn" id="nextBtn" disabled>➡️ Siguiente pregunta</button>
+                <div id="feedback" class="feedback"></div>
+            `;
+
+            container.innerHTML = html;
+            respuestaSeleccionada = false;
+            bloqueado = false;
+
+            const answerBtns = document.querySelectorAll('.answer-btn');
+            answerBtns.forEach(btn => {
+                btn.addEventListener('click', () => seleccionarRespuesta(parseInt(btn.dataset.index)));
+            });
+
+            document.getElementById('nextBtn').disabled = true;
+        }
+
+        function volverASeleccion() {
+            mostrarSeleccionBalotarios();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function seleccionarRespuesta(indiceSeleccionado) {
+            if (bloqueado || respuestaSeleccionada) return;
+
+            const pregunta = preguntas[preguntaActual];
+            const esCorrecta = (indiceSeleccionado === pregunta.correcta);
+            const feedbackDiv = document.getElementById('feedback');
+            const nextBtn = document.getElementById('nextBtn');
+            const botones = document.querySelectorAll('.answer-btn');
+            
+            if (esCorrecta) {
+                puntuacion++;
+                respuestaSeleccionada = true;
+                bloqueado = true;
+                
+                botones[indiceSeleccionado].classList.add('correct');
+                feedbackDiv.className = 'feedback success';
+                feedbackDiv.textContent = '✅ ¡Correcto! Puedes continuar.';
+                nextBtn.disabled = false;
+                botones.forEach(btn => btn.disabled = true);
+            } else {
+                // Marcar la incorrecta
+                botones[indiceSeleccionado].classList.add('incorrect');
+                
+                // Mostrar la respuesta correcta
+                botones.forEach((btn, index) => {
+                    if (index === pregunta.correcta) {
+                        btn.classList.add('show-correct');
+                    }
+                });
+                
+                // Si no está en modo repaso, guardar la pregunta incorrecta
+                if (!modoRepaso) {
+                    // Verificar si ya está en la lista (evitar duplicados)
+                    const yaExiste = preguntasIncorrectas.some(p => 
+                        p.texto === pregunta.texto && p.correcta === pregunta.correcta
+                    );
+                    if (!yaExiste) {
+                        preguntasIncorrectas.push({...pregunta});
+                    }
+                }
+                
+                feedbackDiv.className = 'feedback error';
+                feedbackDiv.textContent = '❌ Incorrecto. La respuesta correcta es ' + 
+                    String.fromCharCode(65 + pregunta.correcta) + '.';
+                
+                // En modo repaso, permitir avanzar después de ver la respuesta
+                if (modoRepaso) {
+                    respuestaSeleccionada = true;
+                    bloqueado = true;
+                    nextBtn.disabled = false;
+                    botones.forEach(btn => btn.disabled = true);
+                } else {
+                    nextBtn.disabled = true;
+                    respuestaSeleccionada = false;
+                }
+            }
+            
+            const scoreSpan = document.querySelector('.score');
+            if (scoreSpan) scoreSpan.textContent = `✅ Aciertos: ${puntuacion}`;
+        }
+
+        function siguientePregunta() {
+            const nextBtn = document.getElementById('nextBtn');
+            if (nextBtn.disabled) return;
+            
+            preguntaActual++;
+            
+            if (preguntaActual < preguntas.length) {
+                renderizarPregunta();
+            } else {
+                if (modoRepaso) {
+                    mostrarResultadoRepaso();
+                } else {
+                    mostrarResultado();
+                }
+            }
+        }
+
+        function mostrarResultado() {
+            const porcentaje = (puntuacion / preguntas.length) * 100;
+            let mensaje = "";
+            
+            if (porcentaje === 100) mensaje = "🏆 ¡Perfecto! ¡Eres un experto!";
+            else if (porcentaje >= 70) mensaje = "🎉 ¡Muy bien! Sigue así.";
+            else if (porcentaje >= 50) mensaje = "👍 Está bien, puedes mejorar.";
+            else mensaje = "📚 Sigue practicando, ¡lo lograrás!";
+            
+            const incorrectas = preguntas.length - puntuacion;
+            
+            const container = document.getElementById('content');
+            let html = `
+                <div class="result">
+                    <h1>📊 Resultado Final - ${balotarioActual.nombre}</h1>
+                    <div class="result-stats">
+                        <div class="result-stat correct-stat">
+                            <div class="number">${puntuacion}</div>
+                            <div class="label">✅ Correctas</div>
+                        </div>
+                        <div class="result-stat incorrect-stat">
+                            <div class="number">${incorrectas}</div>
+                            <div class="label">❌ Incorrectas</div>
+                        </div>
+                        <div class="result-stat">
+                            <div class="number">${Math.round(porcentaje)}%</div>
+                            <div class="label">📊 Porcentaje</div>
+                        </div>
+                    </div>
+                    <p>${mensaje}</p>`;
+            
+            // Botón de repaso si hay preguntas incorrectas
+            if (preguntasIncorrectas.length > 0) {
+                html += `
+                    <button class="review-btn" onclick="iniciarRepaso()">
+                        📝 Repasar ${preguntasIncorrectas.length} preguntas incorrectas
+                    </button>
+                    <br>
+                `;
+            }
+            
+            html += `
+                    <button class="restart-btn" id="restartBtn">🔄 Reiniciar este balotario</button>
+                    <button class="restart-btn back-btn" id="backBtn">📚 Volver a seleccionar balotario</button>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+            document.getElementById('restartBtn').addEventListener('click', reiniciarQuiz);
+            document.getElementById('backBtn').addEventListener('click', volverASeleccion);
+        }
+
+        function mostrarResultadoRepaso() {
+            const porcentaje = (puntuacion / preguntas.length) * 100;
+            let mensaje = "";
+            
+            if (porcentaje === 100) mensaje = "🎉 ¡Excelente! Has corregido todas tus respuestas incorrectas.";
+            else if (porcentaje >= 70) mensaje = "👍 Buen trabajo en el repaso. ¡Sigue así!";
+            else mensaje = "📚 Sigue practicando estas preguntas.";
+            
+            const container = document.getElementById('content');
+            let html = `
+                <div class="result">
+                    <h1>📝 Resultado del Repaso</h1>
+                    <div class="result-stats">
+                        <div class="result-stat correct-stat">
+                            <div class="number">${puntuacion}</div>
+                            <div class="label">✅ Correctas en repaso</div>
+                        </div>
+                        <div class="result-stat incorrect-stat">
+                            <div class="number">${preguntas.length - puntuacion}</div>
+                            <div class="label">❌ Aún incorrectas</div>
+                        </div>
+                        <div class="result-stat">
+                            <div class="number">${Math.round(porcentaje)}%</div>
+                            <div class="label">📊 Porcentaje</div>
+                        </div>
+                    </div>
+                    <p>${mensaje}</p>`;
+            
+            // Si aún hay incorrectas, permitir repasar nuevamente
+            if (puntuacion < preguntas.length) {
+                // Actualizar la lista de incorrectas con las que aún fallaron en el repaso
+                const nuevasIncorrectas = [];
+                // Esto es más complejo, por simplicidad, permitimos repasar todas las incorrectas originales
+                html += `
+                    <button class="review-btn" onclick="iniciarRepaso()">
+                        🔄 Repasar nuevamente (${preguntas.length - puntuacion} pendientes)
+                    </button>
+                    <br>
+                `;
+            }
+            
+            html += `
+                    <button class="restart-btn" id="restartBtn">🔄 Reiniciar balotario completo</button>
+                    <button class="restart-btn back-btn" id="backBtn">📚 Volver a seleccionar balotario</button>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+            document.getElementById('restartBtn').addEventListener('click', reiniciarQuiz);
+            document.getElementById('backBtn').addEventListener('click', volverASeleccion);
+        }
+
+        function reiniciarQuiz() {
+            modoRepaso = false;
+            preguntas = mezclarArray([...preguntasOriginales]);
+            preguntasIncorrectas = [];
+            preguntaActual = 0;
+            puntuacion = 0;
+            respuestaSeleccionada = false;
+            bloqueado = false;
+            renderizarPregunta();
+        }
+
+        document.getElementById('content').addEventListener('click', (e) => {
+            if (e.target.id === 'nextBtn') {
+                siguientePregunta();
+            }
+        });
+
+        window.seleccionarBalotario = seleccionarBalotario;
+        window.volverASeleccion = volverASeleccion;
+        window.iniciarRepaso = iniciarRepaso;
+
+        cargarTodosLosBalotarios();
+    </script>
+</body>
+</html>
